@@ -177,3 +177,22 @@ class StairsApiClient:
                 strip_number,
                 e,
             )
+
+    async def async_get_all_statuses(self):
+        """Pobiera status wszystkich pasków LED za jednym zapytaniem."""
+        try:
+            async with self.session.get(f"{self._base_url}/led/status/all") as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    _LOGGER.debug("Otrzymano status wszystkich pasków: %s", data)
+                    return data
+                _LOGGER.error(
+                    "Błąd podczas pobierania statusu wszystkich pasków: %s", resp.status
+                )
+                return None
+        except aiohttp.ClientError as e:
+            _LOGGER.error(
+                "Błąd połączenia z API podczas pobierania statusu wszystkich pasków: %s",
+                e,
+            )
+            return None

@@ -46,57 +46,13 @@ async def async_setup_entry(
     """Skonfiguruj platformę światła z wpisu konfiguracyjnego."""
     _LOGGER.info("Uruchamiam async_setup_entry dla light")
 
-    api_client = hass.data[DOMAIN][config_entry.entry_id]
-    num_led_strips = config_entry.data["led_strips"]
+    api_client = hass.data[DOMAIN][config_entry.entry_id]["api_client"]
+    entities = hass.data[DOMAIN][config_entry.entry_id]["entities"]
 
-    async_add_entities([Stairs(hass, api_client, i) for i in range(num_led_strips)])
+    async_add_entities(entities)
 
-
-# async def async_setup_platform(
-#     hass: HomeAssistant, config: ConfigType, async_add_entities: AddEntitiesCallback
-# ) -> None:
-#     """Konfiguracja platformy."""
-#     _LOGGER.debug("Uruchamiam async_setup_platform")
-#     host = config[CONF_HOST]
-#     port = config[CONF_PORT]
-#     num_led_strips = config["led_strips"]
-
-#     _LOGGER.debug(
-#         "Konfiguruję platformę Stairs dla hosta %s i portu %s, liczba pasków LED: %s",
-#         host,
-#         port,
-#         num_led_strips,
-#     )
-
-#     # Tworzymy encje dla każdego paska LED
-#     async_add_entities([Stairs(hass, host, port, i) for i in range(num_led_strips)])
-
-
-# async def async_setup_entry(
-#     hass: HomeAssistant,
-#     config_entry: ConfigEntry,
-#     async_add_entities: AddEntitiesCallback,
-# ) -> None:
-#     """Skonfiguruj platformę z wpisu konfiguracyjnego."""
-#     _LOGGER.info("Uruchamiam async_setup_entry")
-#     host = config_entry.data[CONF_HOST]
-#     port = config_entry.data[CONF_PORT]
-#     num_led_strips = config_entry.data["led_strips"]
-
-#     _LOGGER.info(
-#         "Konfiguruję platformę %s dla hosta %s i portu %s, liczba pasków LED: %s",
-#         DOMAIN,
-#         host,
-#         port,
-#         num_led_strips,
-#     )
-
-#     # session = hass.helpers.aiohttp_client.async_get_clientsession()
-#     # api_client = StairsApiClient(host, port, session)
-
-#     async_add_entities(
-#         [Stairs(hass, host, port, i) for i in range(num_led_strips)], True
-#     )
+    # Uruchom pętlę aktualizacji dla wszystkich encji
+    await start_global_update_loop(hass, entities)
 
 
 class Stairs(LightEntity, RestoreEntity):
@@ -143,67 +99,67 @@ class Stairs(LightEntity, RestoreEntity):
             if "effect" in state.attributes:
                 self._effect = state.attributes.get("effect", "STROBE")
 
-        # Pobierz stan z API przy starcie
-        await self.async_initialize_state_from_api()
+        # # Pobierz stan z API przy starcie
+        # await self.async_initialize_state_from_api()
 
-        # Uruchom pętlę aktualizacji
-        await self.start_update_loop()
+        # # Uruchom pętlę aktualizacji
+        # await self.start_update_loop()
 
-    async def async_will_remove_from_hass(self) -> None:
-        """Wywołane przed usunięciem encji z HA."""
-        _LOGGER.debug("Uruchamiam async_will_remove_from_hass dla %s", self._unique_id)
-        await self.stop_update_loop()
+    # async def async_will_remove_from_hass(self) -> None:
+    #     """Wywołane przed usunięciem encji z HA."""
+    #     _LOGGER.debug("Uruchamiam async_will_remove_from_hass dla %s", self._unique_id)
+    #     await self.stop_update_loop()
 
-    async def async_initialize_state_from_api(self):
-        """Pobiera początkowy stan paska LED z API."""
-        try:
-            data = await self._api_client.async_get_status(self._strip_number)
-            if data:
-                _LOGGER.info(
-                    "Otrzymano początkowy status dla paska %s: %s",
-                    self._strip_number,
-                    data,
-                )
-                self._state = data.get("state") == "ON"
-                self._brightness = data.get("brightness", self._brightness)
-                self._rgb_color = tuple(data.get("rgb_color", self._rgb_color))
-                self._effect = data.get("effect", self._effect)
-            else:
-                _LOGGER.warning(
-                    "Nie udało się pobrać początkowego stanu dla paska %s",
-                    self._strip_number,
-                )
-                self._state = False
-        except aiohttp.ClientConnectionError as e:
-            _LOGGER.error(
-                "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Nie można połączyć się z serwerem: %s",
-                self._strip_number,
-                e,
-            )
-            self._state = False
-        except aiohttp.InvalidURL as e:
-            _LOGGER.error(
-                "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Nieprawidłowy URL: %s",
-                self._strip_number,
-                e,
-            )
-            self._state = False
-        except aiohttp.ClientResponseError as e:
-            _LOGGER.error(
-                "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Błąd odpowiedzi HTTP: %s",
-                self._strip_number,
-                e,
-            )
-            self._state = False
-        except TimeoutError as e:
-            _LOGGER.error(
-                "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Przekroczono czas oczekiwania: %s",
-                self._strip_number,
-                e,
-            )
-            self._state = False
-        finally:
-            self.async_write_ha_state()
+    # async def async_initialize_state_from_api(self):
+    #     """Pobiera początkowy stan paska LED z API."""
+    #     try:
+    #         data = await self._api_client.async_get_status(self._strip_number)
+    #         if data:
+    #             _LOGGER.info(
+    #                 "Otrzymano początkowy status dla paska %s: %s",
+    #                 self._strip_number,
+    #                 data,
+    #             )
+    #             self._state = data.get("state") == "ON"
+    #             self._brightness = data.get("brightness", self._brightness)
+    #             self._rgb_color = tuple(data.get("rgb_color", self._rgb_color))
+    #             self._effect = data.get("effect", self._effect)
+    #         else:
+    #             _LOGGER.warning(
+    #                 "Nie udało się pobrać początkowego stanu dla paska %s",
+    #                 self._strip_number,
+    #             )
+    #             self._state = False
+    #     except aiohttp.ClientConnectionError as e:
+    #         _LOGGER.error(
+    #             "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Nie można połączyć się z serwerem: %s",
+    #             self._strip_number,
+    #             e,
+    #         )
+    #         self._state = False
+    #     except aiohttp.InvalidURL as e:
+    #         _LOGGER.error(
+    #             "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Nieprawidłowy URL: %s",
+    #             self._strip_number,
+    #             e,
+    #         )
+    #         self._state = False
+    #     except aiohttp.ClientResponseError as e:
+    #         _LOGGER.error(
+    #             "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Błąd odpowiedzi HTTP: %s",
+    #             self._strip_number,
+    #             e,
+    #         )
+    #         self._state = False
+    #     except TimeoutError as e:
+    #         _LOGGER.error(
+    #             "Błąd połączenia z API podczas pobierania początkowego statusu paska %s: Przekroczono czas oczekiwania: %s",
+    #             self._strip_number,
+    #             e,
+    #         )
+    #         self._state = False
+    #     finally:
+    #         self.async_write_ha_state()
 
     @property
     def should_poll(self) -> bool:
@@ -264,10 +220,6 @@ class Stairs(LightEntity, RestoreEntity):
 
     async def async_turn_on(self, **kwargs: vol.Any) -> None:
         """Włącz oświetlenie."""
-        await self._turn_on_online(**kwargs)
-
-    async def _turn_on_online(self, **kwargs):
-        """Włączanie oświetlenia w trybie online."""
         _LOGGER.info("Turn on strip: %s", self._strip_number)
         brightness = kwargs.get(ATTR_BRIGHTNESS)
         rgb_color = kwargs.get(ATTR_RGB_COLOR)
@@ -305,10 +257,6 @@ class Stairs(LightEntity, RestoreEntity):
 
     async def async_turn_off(self, **kwargs: vol.Any) -> None:
         """Wyłącz oświetlenie."""
-        await self._turn_off_online()
-
-    async def _turn_off_online(self):
-        """Wyłączanie oświetlenia w trybie online."""
         _LOGGER.info("Turn off strip: %s", self._strip_number)
         self._state = False
         self._effect = None
@@ -318,64 +266,101 @@ class Stairs(LightEntity, RestoreEntity):
 
         self.async_write_ha_state()
 
-    async def start_update_loop(self):
-        """Rozpoczęcie pętli aktualizacji."""
-
-        async def update_callback(now):
-            await self.async_check_availability()
-            if self._available:
-                await self.async_update()
-            elif self._state != STATE_UNAVAILABLE:
-                self._state = STATE_UNAVAILABLE
-            self.async_write_ha_state()
-
-        _LOGGER.debug("Uruchamiam pętlę aktualizacji")
-        self._stop_update = async_track_time_interval(
-            self.hass, update_callback, timedelta(seconds=5)
-        )
-
-    async def stop_update_loop(self):
-        """Zatrzymanie pętli aktualizacji."""
-        if self._stop_update:
-            _LOGGER.debug("Zatrzymuję pętlę aktualizacji")
-            self._stop_update()
-            self._stop_update = None
-
-    async def async_check_availability(self):
-        """Sprawdza dostępność paska LED, odpytując API."""
-        is_available = await self._api_client.async_check_availability()
-        self._available = is_available
-
-        if self._available:
-            if not self._available:
-                _LOGGER.info("Pasek LED %s jest dostępny", self._strip_number)
-        else:
-            if self._available:
-                _LOGGER.warning("Pasek LED %s jest niedostępny", self._strip_number)
-            self._state = STATE_UNAVAILABLE
-
-    async def async_update(self) -> None:
-        """Aktualizuj stan encji, pobierając dane z API."""
-        data = await self._api_client.async_get_status(self._strip_number)
+    def update_state_from_data(self, data):
+        """Aktualizuje stan encji na podstawie danych z API."""
+        _LOGGER.info(f"Aktualizuje stan encji {self.entity_id}")
         if data:
-            _LOGGER.info("Otrzymano status: %s", data)
-            self._state = data.get("state") == "ON"
-            rgb_color = data.get("rgb_color")
-            if rgb_color is not None:
-                self._rgb_color = tuple(rgb_color)
-            self._effect = data.get("effect", self._effect)
+            strip_data = data.get(str(self._strip_number))
+            if strip_data:
+                self._state = strip_data.get("state") == "ON"
+                self._brightness = strip_data.get("brightness", self._brightness)
+                self._rgb_color = tuple(strip_data.get("rgb_color", self._rgb_color))
+                self._effect = strip_data.get("effect", self._effect)
+                self._available = True
+            else:
+                self._available = False
         else:
-            _LOGGER.error("Błąd podczas aktualizacji paska %s", self._strip_number)
-            self._state = False
+            self._available = False
+        self.async_write_ha_state()
 
-    async def async_set_solid_color(self, rgb):
-        """Ustaw jednolity kolor."""
-        await self._api_client.async_set_solid_color(self._strip_number, rgb)
+    # async def start_update_loop(self):
+    #     """Rozpoczęcie pętli aktualizacji."""
 
-    async def async_set_brightness(self, brightness):
-        """Ustaw jasność paska."""
-        await self._api_client.async_set_brightness(self._strip_number, brightness)
+    #     async def update_callback(now):
+    #         await self.async_check_availability()
+    #         if self._available:
+    #             await self.async_update()
+    #         elif self._state != STATE_UNAVAILABLE:
+    #             self._state = STATE_UNAVAILABLE
+    #         self.async_write_ha_state()
 
-    async def async_set_effect(self, strip_number, effect):
-        """Ustaw efekt na pasku."""
-        await self._api_client.async_set_effect(strip_number, effect)
+    #     _LOGGER.debug("Uruchamiam pętlę aktualizacji")
+    #     self._stop_update = async_track_time_interval(
+    #         self.hass, update_callback, timedelta(seconds=5)
+    #     )
+
+    # async def stop_update_loop(self):
+    #     """Zatrzymanie pętli aktualizacji."""
+    #     if self._stop_update:
+    #         _LOGGER.debug("Zatrzymuję pętlę aktualizacji")
+    #         self._stop_update()
+    #         self._stop_update = None
+
+    # async def async_check_availability(self):
+    #     """Sprawdza dostępność paska LED, odpytując API."""
+    #     is_available = await self._api_client.async_check_availability()
+    #     self._available = is_available
+
+    #     if self._available:
+    #         if not self._available:
+    #             _LOGGER.info("Pasek LED %s jest dostępny", self._strip_number)
+    #     else:
+    #         if self._available:
+    #             _LOGGER.warning("Pasek LED %s jest niedostępny", self._strip_number)
+    #         self._state = STATE_UNAVAILABLE
+
+    # async def async_update(self) -> None:
+    #     """Aktualizuj stan encji, pobierając dane z API."""
+    #     data = await self._api_client.async_get_status(self._strip_number)
+    #     if data:
+    #         _LOGGER.info("Otrzymano status: %s", data)
+    #         self._state = data.get("state") == "ON"
+    #         rgb_color = data.get("rgb_color")
+    #         if rgb_color is not None:
+    #             self._rgb_color = tuple(rgb_color)
+    #         self._effect = data.get("effect", self._effect)
+    #     else:
+    #         _LOGGER.error("Błąd podczas aktualizacji paska %s", self._strip_number)
+    #         self._state = False
+
+    # async def async_set_solid_color(self, rgb):
+    #     """Ustaw jednolity kolor."""
+    #     await self._api_client.async_set_solid_color(self._strip_number, rgb)
+
+    # async def async_set_brightness(self, brightness):
+    #     """Ustaw jasność paska."""
+    #     await self._api_client.async_set_brightness(self._strip_number, brightness)
+
+    # async def async_set_effect(self, strip_number, effect):
+    #     """Ustaw efekt na pasku."""
+    #     await self._api_client.async_set_effect(strip_number, effect)
+
+
+async def start_global_update_loop(hass: HomeAssistant, entities: tuple[Stairs]):
+    """Uruchamia globalną pętlę aktualizacji dla wszystkich encji."""
+
+    async def update_all_entities(now):
+        """Pobiera dane dla wszystkich pasków i aktualizuje encje."""
+        all_strip_data = await entities[0]._api_client.async_get_all_statuses()
+        is_available = await entities[0]._api_client.async_check_availability()
+
+        for entity in entities:
+            if is_available:
+                entity.update_state_from_data(all_strip_data)
+            else:
+                entity._available = False
+                entity._state = STATE_UNAVAILABLE
+                entity.async_write_ha_state()
+
+    _LOGGER.debug("Uruchamiam globalną pętlę aktualizacji")
+    async_track_time_interval(hass, update_all_entities, timedelta(seconds=5))

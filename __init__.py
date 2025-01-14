@@ -46,7 +46,10 @@ async def async_setup_entry(
     if DOMAIN not in hass.data:
         hass.data[DOMAIN] = {}
 
-    hass.data[DOMAIN][entry.entry_id] = api_client
+    hass.data[DOMAIN][entry.entry_id] = {
+        "api_client": api_client,
+        "entities": [Stairs(hass, api_client, i) for i in range(num_led_strips)],
+    }
 
     # entry.runtime_data = Stairs(hass, api_client, 0)
 
@@ -60,6 +63,15 @@ async def async_setup_entry(
 
 
 # Update entry annotation
-async def async_unload_entry(hass: HomeAssistant, entry: StairsConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        # Usuń instancję api_client z hass.data
+        del hass.data[DOMAIN][entry.entry_id]
+
+        # Jeśli to był ostatni wpis, usuń cały DOMAIN z hass.data
+        if not hass.data[DOMAIN]:
+            del hass.data[DOMAIN]
+
+    return unload_ok
