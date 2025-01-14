@@ -1,0 +1,10 @@
+{
+  "domain": "stairs",
+  "name": "Stairs",
+  "codeowners": ["@Adasinho"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://www.home-assistant.io/integrations/stairs",
+  "iot_class": "local_polling",
+  "requirements": []
+}
